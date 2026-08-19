@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustProof | Secure Gateway</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --cyber-blue: #00f3ff; --dark-bg: #090b10; --panel-bg: rgba(13, 17, 25, 0.85); --text-main: #e2e8f0; --text-muted: #64748b; }
+        body { margin: 0; padding: 0; background-color: var(--dark-bg); background-image: radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.06), transparent 60%); font-family: 'Inter', sans-serif; color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px); background-size: 40px 40px; z-index: -1; }
+        .container { text-align: center; width: 100%; max-width: 800px; padding: 20px; }
+        .header h1 { font-family: 'Rajdhani', sans-serif; color: #fff; font-size: 42px; margin: 0 0 10px 0; letter-spacing: 2px; text-shadow: 0 0 15px rgba(0, 243, 255, 0.4); }
+        .header p { color: var(--cyber-blue); font-size: 13px; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 45px; font-weight: 600; }
+        .portal-grid { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+        .portal-card { background: var(--panel-bg); border: 1px solid rgba(0, 243, 255, 0.2); box-shadow: 0 0 30px rgba(0, 243, 255, 0.05); border-radius: 8px; padding: 35px 30px; width: 320px; backdrop-filter: blur(12px); transition: all 0.3s ease; text-decoration: none; display: block; }
+        .portal-card:hover { transform: translateY(-5px); border-color: var(--cyber-blue); box-shadow: 0 0 25px rgba(0, 243, 255, 0.3); }
+        .portal-card h2 { font-family: 'Rajdhani', sans-serif; color: #fff; font-size: 24px; margin: 15px 0 10px 0; letter-spacing: 1px; }
+        .portal-card p { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin: 0; }
+        .icon { font-size: 36px; margin-bottom: 10px; display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>TRUSTPROOF PORTAL</h1>
+        <p>Cryptographic Certificate Issuance & Verification Ecosystem</p>
+    </div>
+
+    <div class="portal-grid">
+        <!-- College Admin Gateway -->
+        <a href="/login.html" class="portal-card">
+            <span class="icon">🏛️</span>
+            <h2>College Admin</h2>
+            <p>Secure login portal for institutional authorities to issue digitally signed BCA student credentials.</p>
+        </a>
+
+        <!-- Verifier Terminal Gateway -->
+        <a href="/verify.html" class="portal-card">
+            <span class="icon">🔍</span>
+            <h2>Employer Verifier</h2>
+            <p>Instant verification terminal to audit scanned QR codes and detect potential certificate forgery.</p>
+        </a>
+    </div>
+</div>
+</body>
+</html>

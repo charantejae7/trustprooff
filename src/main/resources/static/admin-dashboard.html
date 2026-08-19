@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustProof | College Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --cyber-blue: #00f3ff; --dark-bg: #090b10; --panel-bg: rgba(13, 17, 25, 0.85); --text-main: #e2e8f0; --text-muted: #64748b; }
+        body { margin: 0; padding: 20px; background-color: var(--dark-bg); font-family: 'Inter', sans-serif; color: var(--text-main); }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0, 243, 255, 0.2); padding-bottom: 15px; margin-bottom: 30px; }
+        .header h1 { font-family: 'Rajdhani', sans-serif; color: #fff; margin: 0; font-size: 26px; letter-spacing: 1px; }
+        .logout-btn { color: #ff3366; text-decoration: none; font-size: 12px; font-weight: 600; text-transform: uppercase; border: 1px solid #ff3366; padding: 6px 12px; border-radius: 4px; transition: all 0.3s ease; }
+        .logout-btn:hover { background: #ff3366; color: #fff; }
+
+        .grid-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; }
+        @media (max-width: 900px) { .grid-layout { grid-template-columns: 1fr; } }
+
+        .panel { background: var(--panel-bg); border: 1px solid rgba(0, 243, 255, 0.2); box-shadow: 0 0 30px rgba(0, 243, 255, 0.05); border-radius: 8px; padding: 25px; backdrop-filter: blur(12px); }
+        .panel h2 { font-family: 'Rajdhani', sans-serif; color: var(--cyber-blue); margin-top: 0; font-size: 20px; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600; }
+        input { width: 100%; padding: 10px 12px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; color: #fff; font-size: 13px; box-sizing: border-box; }
+        input:focus { outline: none; border-color: var(--cyber-blue); box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+
+        button { width: 100%; padding: 12px; background: transparent; color: var(--cyber-blue); border: 1px solid var(--cyber-blue); border-radius: 4px; font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; }
+        button:hover { background: var(--cyber-blue); color: #000; box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); }
+
+        /* Table Styles for Stored Records */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        th { color: var(--cyber-blue); font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; font-size: 14px; }
+        td { color: var(--text-main); font-family: monospace; }
+        .no-records { text-align: center; color: var(--text-muted); padding: 20px; font-style: italic; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>SSMRV ADMIN PORTAL</h1>
+        <a href="/" class="logout-btn">Log Out Gateway</a>
+    </div>
+
+    <div class="grid-layout">
+        <!-- Left Panel: Issue Certificate Form -->
+        <div class="panel">
+            <h2>Issue Certificate</h2>
+            <form action="/api/certificate/issue" method="POST">
+                <div class="input-group">
+                    <label for="studentName">Student Full Name</label>
+                    <input type="text" id="studentName" name="studentName" placeholder="e.g. Charan Teja E" required>
+                </div>
+                <div class="input-group">
+                    <label for="course">Course Specialization</label>
+                    <input type="text" id="course" name="course" placeholder="e.g. BCA in Cyber Security" required>
+                </div>
+                <div class="input-group">
+                    <label for="cgpa">CGPA / Score</label>
+                    <input type="text" id="cgpa" name="cgpa" placeholder="e.g. 9.5" required>
+                </div>
+                <button type="submit">Generate & Sign PDF</button>
+            </form>
+        </div>
+
+        <!-- Right Panel: Database Stored Records Table -->
+        <div class="panel">
+            <h2>Database Audit Trail (Issued Records)</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Course</th>
+                        <th>CGPA</th>
+                        <th>Date</th>
+                    </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                    <tr><td colspan="4" class="no-records">Loading permanent records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch stored records from the database on page load
+    async function fetchRecords() {
+        try {
+            const response = await fetch('/api/certificate/all');
+            const records = await response.json();
+            const tbody = document.getElementById('recordsTableBody');
+
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-records">No certificates issued yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            records.forEach(rec => {
+                const row = document.createElement('tr');
+                // Format date nicely if available
+                const dateStr = rec.issueDate ? new Date(rec.issueDate).toLocaleDateString() : 'N/A';
+                row.innerHTML = `
+                    <td>${rec.studentName}</td>
+                    <td>${rec.course}</td>
+                    <td>${rec.cgpa}</td>
+                    <td>${dateStr}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (err) {
+            console.error("Failed to load records", err);
+            document.getElementById('recordsTableBody').innerHTML = '<tr><td colspan="4" class="no-records" style="color:#ff3366;">Error loading database records.</td></tr>';
+        }
+    }
+
+    // Run fetch on load
+    fetchRecords();
+</script>
+</body>
+</html>
