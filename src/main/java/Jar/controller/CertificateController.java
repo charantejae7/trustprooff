@@ -1,4 +1,4 @@
-package com.trustproof.controller;
+package Jar.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-public class VerificationController {
+public class CertificateController {
 
     // IMPORTANT: Inject or reference your application's generated Public Key here
     private PublicKey getAppPublicKey() throws Exception {
