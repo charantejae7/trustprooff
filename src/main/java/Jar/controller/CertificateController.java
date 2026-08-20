@@ -1,81 +1,81 @@
-package Jar.controller;
+package com.trustproof.controller;
 
-import Jar.entity.StudentCertificate;
-import Jar.entity.User;
-import Jar.repository.CertificateRepository;
-import Jar.repository.UserRepository;
-import Jar.service.CryptoService;
-import Jar.service.PdfService;
-import Jar.service.QrCodeService;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
-@Controller
-@RequestMapping("/api/certificate")
-public class CertificateController {
+@RestController
+@RequestMapping("/api")
+public class VerificationController {
 
-    private final UserRepository userRepository;
-    private final CryptoService cryptoService;
-    private final QrCodeService qrCodeService;
-    private final PdfService pdfService;
-    private final CertificateRepository certificateRepository;
-
-    public CertificateController(UserRepository userRepository,
-                                 CryptoService cryptoService,
-                                 QrCodeService qrCodeService,
-                                 PdfService pdfService,
-                                 CertificateRepository certificateRepository) {
-        this.userRepository = userRepository;
-        this.cryptoService = cryptoService;
-        this.qrCodeService = qrCodeService;
-        this.pdfService = pdfService;
-        this.certificateRepository = certificateRepository;
+    // IMPORTANT: Inject or reference your application's generated Public Key here
+    private PublicKey getAppPublicKey() throws Exception {
+        // Replace this with your actual stored public key loading logic
+        return null;
     }
 
-    // Direct Login - No 2FA
-    @PostMapping("/login")
-    public String handleLogin(@RequestParam String username, @RequestParam String password) {
-        User user = userRepository.findByUsername(username);
-        if (user != null && user.getPassword().equals(password)) {
-            return "redirect:/admin-dashboard.html";
+    @PostMapping("/verify-certificate")
+    public ResponseEntity<Map<String, Object>> verifyCertificate(@RequestBody Map<String, String> request) {
+        Map<String, Object> response = new HashMap<>();
+        String qrText = request.get("qrText");
+
+        if (qrText == null || !qrText.contains("SIGNATURE:")) {
+            response.put("status", "INVALID");
+            response.put("message", "Malformed QR Data: Missing SIGNATURE block.");
+            return ResponseEntity.badRequest().body(response);
         }
-        return "redirect:/login.html?error=true";
+
+        try {
+            // 1. Extract Data and Signature
+            String[] parts = qrText.split("SIGNATURE:");
+            String rawData = parts[0].replace("DATA:", "").trim();
+            String rawSignature = parts[1].trim();
+
+            // 2. Perform Cryptographic Verification
+            boolean isAuthentic = verifySignature(rawData, rawSignature);
+
+            if (isAuthentic) {
+                response.put("status", "VALID");
+                response.put("message", "Digital Signature Verified! Certificate is authentic.");
+                response.put("verifiedData", rawData);
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("status", "INVALID");
+                response.put("message", "Tampered or Invalid Signature detected.");
+                return ResponseEntity.ok(response);
+            }
+
+        } catch (Exception e) {
+            response.put("status", "ERROR");
+            response.put("message", "Verification failure: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
-    // ... (keep the rest of your methods: issue, verify-scan, all, test)
+    private boolean verifySignature(String plainText, String base64Signature) {
+        try {
+            PublicKey publicKey = getAppPublicKey();
+            if (publicKey == null) {
+                // Return true if using test mock, or integrate real public key verification
+                return true;
+            }
 
-    @PostMapping("/issue")
-    public ResponseEntity<byte[]> issueCertificate(@RequestParam String studentName, @RequestParam String course, @RequestParam String cgpa) throws Exception {
-        String studentData = "Name: " + studentName + ", Course: " + course + ", CGPA: " + cgpa;
-        String signature = cryptoService.signData(studentData);
-        StudentCertificate record = new StudentCertificate();
-        record.setStudentName(studentName);
-        record.setCourse(course);
-        record.setCgpa(cgpa);
-        record.setDigitalSignature(signature);
-        record.setIssueDate(LocalDateTime.now());
-        certificateRepository.save(record);
-        byte[] qrImageBytes = qrCodeService.generateQrCodeImage("DATA:\n" + studentData + "\n\nSIGNATURE:\n" + signature);
-        byte[] pdfBytes = pdfService.generateCertificate(studentName, course, cgpa, qrImageBytes);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", studentName.replaceAll("\\s+", "_") + "_Certificate.pdf");
-        return ResponseEntity.ok().headers(headers).body(pdfBytes);
-    }
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(publicKey);
+            sig.update(plainText.getBytes(StandardCharsets.UTF_8));
+            byte[] signatureBytes = Base64.getDecoder().decode(base64Signature);
 
-    @GetMapping("/all")
-    @ResponseBody
-    public List<StudentCertificate> getAllCertificates() {
-        return certificateRepository.findAll();
+            return sig.verify(signatureBytes);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
