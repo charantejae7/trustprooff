@@ -1,9 +1,12 @@
 package Jar.controller;
 
+import Jar.entity.User;
+import Jar.repository.UserRepository;
 import Jar.service.CryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -16,9 +19,47 @@ import java.util.Map;
 @RequestMapping("/api")
 public class CertificateController {
 
+    // 1. Injects your permanent cryptography keys
     @Autowired
     private CryptoService cryptoService;
 
+    // 2. Injects your real Supabase Database connection
+    @Autowired
+    private UserRepository userRepository;
+
+    // ==========================================
+    // ENDPOINT 1: REAL SUPABASE LOGIN
+    // ==========================================
+    @PostMapping("/certificate/login")
+    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> credentials) {
+        Map<String, String> response = new HashMap<>();
+        String username = credentials.get("username");
+        String password = credentials.get("password");
+
+        try {
+            // Fetches the real user from your PostgreSQL database
+            User user = userRepository.findByUsername(username);
+
+            // Validates the credentials against the database record
+            if (user != null && user.getPassword().equals(password)) {
+                response.put("status", "success");
+                response.put("message", "Login successful");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("status", "error");
+                response.put("message", "Invalid username or password");
+                return ResponseEntity.status(401).body(response);
+            }
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Database connection error: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    // ==========================================
+    // ENDPOINT 2: CRYPTOGRAPHIC VERIFICATION
+    // ==========================================
     @PostMapping("/verify")
     public ResponseEntity<Map<String, Object>> verifyCertificate(@RequestBody Map<String, String> request) {
         Map<String, Object> response = new HashMap<>();
@@ -35,7 +76,6 @@ public class CertificateController {
             String extractedData = parts[0].replace("DATA:", "").trim();
             String extractedSignature = parts[1].replaceAll("\\s+", "");
 
-            // Verify using the permanent Public Key from CryptoService
             boolean isAuthentic = verifyDigitalSignature(extractedData, extractedSignature);
 
             if (isAuthentic) {
@@ -55,9 +95,11 @@ public class CertificateController {
         }
     }
 
+    // ==========================================
+    // HELPER: SIGNATURE MATH
+    // ==========================================
     private boolean verifyDigitalSignature(String data, String signatureBase64) {
         try {
-            // Get the permanent key directly from CryptoService!
             String publicKeyString = cryptoService.getPublicKey();
             byte[] keyBytes = Base64.getDecoder().decode(publicKeyString);
             PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
@@ -72,25 +114,6 @@ public class CertificateController {
         } catch (Exception e) {
             System.out.println("🚨 CRASH: Signature validation failed: " + e.getMessage());
             return false;
-        }
-    }
-    // Restoring your Login Endpoint!
-    @PostMapping("/certificate/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> credentials) {
-        Map<String, String> response = new HashMap<>();
-
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-
-        // Replace "admin" and "password123" with your actual college admin credentials
-        if ("ssmrv_admin".equals(username) && "cyber2026".equals(password)) {
-            response.put("status", "success");
-            response.put("message", "Login successful");
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("status", "error");
-            response.put("message", "Invalid username or password");
-            return ResponseEntity.status(401).body(response);
         }
     }
 }
