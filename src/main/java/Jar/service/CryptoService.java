@@ -1,6 +1,7 @@
 package Jar.service;
 
 import org.springframework.stereotype.Service;
+import java.io.*;
 import java.security.*;
 import java.util.Base64;
 
@@ -8,46 +9,40 @@ import java.util.Base64;
 public class CryptoService {
 
     private final KeyPair keyPair;
+    // This will create a hidden file in your project folder to store the keys forever
+    private static final String KEY_FILE = "college_keys.dat";
 
-    // 1. Generate the College's RSA Key Pair when the application starts
-    public CryptoService() throws NoSuchAlgorithmException {
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048, new SecureRandom());
-        this.keyPair = generator.generateKeyPair();
-        System.out.println("✅ TrustProof Cryptographic Keys Generated Successfully!");
+    public CryptoService() throws Exception {
+        File file = new File(KEY_FILE);
+
+        if (file.exists()) {
+            // 1. The file exists! Load the permanent keys so old QR codes still work
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+                this.keyPair = (KeyPair) ois.readObject();
+                System.out.println("✅ TrustProof Keys successfully loaded from file!");
+            }
+        } else {
+            // 2. First time running? Generate real keys and save them to the file forever
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048, new SecureRandom());
+            this.keyPair = generator.generateKeyPair();
+
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+                oos.writeObject(this.keyPair);
+                System.out.println("✅ New TrustProof Keys generated and securely saved to college_keys.dat!");
+            }
+        }
     }
 
-    // 2. Sign the Student Data using the College's Private Key
     public String signData(String studentPayload) throws Exception {
         Signature privateSignature = Signature.getInstance("SHA256withRSA");
         privateSignature.initSign(keyPair.getPrivate());
-        privateSignature.update(studentPayload.getBytes());
-        byte[] signatureBytes = privateSignature.sign();
-        return Base64.getEncoder().encodeToString(signatureBytes);
+        privateSignature.update(studentPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return Base64.getEncoder().encodeToString(privateSignature.sign());
     }
 
-    // 3. Export the Public Key so anyone can verify the certificate
+    // The Controller will call this to get the real, perfectly formatted Public Key
     public String getPublicKey() {
         return Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
-    }
-    // 4. Verify a signature to catch hackers and tampered certificates
-    public boolean verifySignature(String studentPayload, String base64Signature) {
-        try {
-            // Re-create the math check using the College's Public Key
-            Signature publicSignature = Signature.getInstance("SHA256withRSA");
-            publicSignature.initVerify(keyPair.getPublic());
-
-            // Feed it the text the employer scanned
-            publicSignature.update(studentPayload.getBytes());
-
-            // Decode the massive signature string back into bytes
-            byte[] signatureBytes = Base64.getDecoder().decode(base64Signature);
-
-            // This returns TRUE if it matches, and FALSE if even a single letter was tampered with!
-            return publicSignature.verify(signatureBytes);
-
-        } catch (Exception e) {
-            return false; // If anything goes wrong, reject it as a fake!
-        }
     }
 }

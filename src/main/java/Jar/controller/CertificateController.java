@@ -1,8 +1,14 @@
 package Jar.controller;
 
+import Jar.service.CryptoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,12 +16,9 @@ import java.util.Map;
 @RequestMapping("/api")
 public class CertificateController {
 
-    private PublicKey getAppPublicKey() throws Exception {
-        // Replace this with your actual stored public key loading logic later
-        return null;
-    }
+    @Autowired
+    private CryptoService cryptoService;
 
-    // THIS IS THE MISSING METHOD THAT FIXES THE 404 ERROR
     @PostMapping("/verify")
     public ResponseEntity<Map<String, Object>> verifyCertificate(@RequestBody Map<String, String> request) {
         Map<String, Object> response = new HashMap<>();
@@ -28,13 +31,12 @@ public class CertificateController {
         }
 
         try {
-            // 1. Split Data and Signature blocks
             String[] parts = qrContent.split("SIGNATURE:");
             String extractedData = parts[0].replace("DATA:", "").trim();
+            String extractedSignature = parts[1].replaceAll("\\s+", "");
 
-            // 2. Cryptographic Verification Logic goes here
-            // For now, we will set it to true so you can see a successful connection!
-            boolean isAuthentic = true;
+            // Verify using the permanent Public Key from CryptoService
+            boolean isAuthentic = verifyDigitalSignature(extractedData, extractedSignature);
 
             if (isAuthentic) {
                 response.put("status", "VALID");
@@ -50,6 +52,26 @@ public class CertificateController {
             response.put("status", "ERROR");
             response.put("message", "Verification failure: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    private boolean verifyDigitalSignature(String data, String signatureBase64) {
+        try {
+            // Get the permanent key directly from CryptoService!
+            String publicKeyString = cryptoService.getPublicKey();
+            byte[] keyBytes = Base64.getDecoder().decode(publicKeyString);
+            PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
+
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(publicKey);
+            sig.update(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
+            return sig.verify(signatureBytes);
+
+        } catch (Exception e) {
+            System.out.println("🚨 CRASH: Signature validation failed: " + e.getMessage());
+            return false;
         }
     }
 }

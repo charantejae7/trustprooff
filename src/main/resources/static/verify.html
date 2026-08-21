@@ -2,36 +2,165 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Verify Certificate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustProof - Verify Certificate</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 40px; }
-        textarea { width: 100%; max-width: 500px; height: 150px; margin-bottom: 10px; }
-        button { padding: 10px 20px; background-color: #2563eb; color: white; border: none; cursor: pointer; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 5px; background: #f3f4f6; max-width: 500px; }
+        /* Modern CSS Reset */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* Sleek Tech Background */
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main Floating Card */
+        .container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            padding: 40px 30px;
+        }
+
+        h2 {
+            color: #0f172a;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 25px;
+            font-size: 15px;
+        }
+
+        /* Modern Text Input */
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            resize: vertical;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background-color: #f8fafc;
+            color: #334155;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Animated Button */
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Result Box Styling */
+        #result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            line-height: 1.6;
+            font-size: 15px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .success-result {
+            background-color: #ecfdf5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .error-result {
+            background-color: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        .processing {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
-<h2>Paste QR Data Here:</h2>
-<textarea id="qrInput" placeholder="Paste DATA and SIGNATURE here..."></textarea><br>
 
-<button onclick="sendData()">Verify Certificate</button>
+<div class="container">
+    <h2>TrustProof Verifier</h2>
+    <p class="subtitle">Secure Cryptographic Certificate Authentication</p>
 
-<div id="result">Waiting for input...</div>
+    <textarea id="qrInput" placeholder="Paste DATA and SIGNATURE here..."></textarea>
+
+    <button onclick="sendData()" id="verifyBtn">Verify Certificate</button>
+
+    <div id="result"></div>
+</div>
 
 <script>
     async function sendData() {
         const rawText = document.getElementById("qrInput").value.trim();
         const resultBox = document.getElementById("result");
+        const verifyBtn = document.getElementById("verifyBtn");
 
         if (!rawText) {
             alert("Please paste the data first!");
             return;
         }
 
-        resultBox.innerHTML = "Processing...";
+        // Show cool processing animation
+        resultBox.style.display = "block";
+        resultBox.className = "processing";
+        resultBox.innerHTML = "⏳ Processing Cryptographic Signature...";
+        verifyBtn.disabled = true;
+        verifyBtn.style.opacity = "0.7";
 
         try {
-            // This exact path matches the @PostMapping in your Java file!
             const response = await fetch("/api/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -40,12 +169,23 @@
 
             const data = await response.json();
 
-            // Display the JSON response directly on the screen
-            resultBox.innerHTML = "<strong>Status: " + data.status + "</strong><br><br>" +
-                                  "Message: " + data.message + "<br><br>" +
-                                  (data.verifiedData ? "Data: " + data.verifiedData : "");
+            if (data.status === "VALID") {
+                resultBox.className = "success-result";
+                resultBox.innerHTML = "<strong>✅ Status: " + data.status + "</strong><br><br>" +
+                                      "Message: " + data.message + "<br><br>" +
+                                      (data.verifiedData ? "<strong>Verified Data:</strong><br><pre style='margin-top:8px; font-family:monospace;'>" + data.verifiedData + "</pre>" : "");
+            } else {
+                resultBox.className = "error-result";
+                resultBox.innerHTML = "<strong>❌ Status: " + data.status + "</strong><br><br>" +
+                                      "Message: " + data.message;
+            }
         } catch (err) {
-            resultBox.innerHTML = "Error connecting to server.";
+            resultBox.className = "error-result";
+            resultBox.innerHTML = "<strong>⚠️ Error connecting to server.</strong>";
+        } finally {
+            // Turn the button back on
+            verifyBtn.disabled = false;
+            verifyBtn.style.opacity = "1";
         }
     }
 </script>
