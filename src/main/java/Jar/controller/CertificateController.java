@@ -74,4 +74,23 @@ public class CertificateController {
             return false;
         }
     }
+    // Restoring your Login Endpoint!
+    @PostMapping("/certificate/login")
+    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> credentials) {
+        Map<String, String> response = new HashMap<>();
+
+        String username = credentials.get("username");
+        String password = credentials.get("password");
+
+        // Replace "admin" and "password123" with your actual college admin credentials
+        if ("ssmrv_admin".equals(username) && "cyber2026".equals(password)) {
+            response.put("status", "success");
+            response.put("message", "Login successful");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("status", "error");
+            response.put("message", "Invalid username or password");
+            return ResponseEntity.status(401).body(response);
+        }
+    }
 }
